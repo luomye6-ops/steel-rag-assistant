@@ -4,7 +4,7 @@
 
 `steel-rag-assistant` 是一个面向《钢铁冶金学》教材检索问答的最小可运行 RAG 项目骨架。当前阶段只使用 `data` 文件夹下的本地 txt 教材文本，通过命令行完成简单问答流程。
 
-当前版本接入 OpenAI API 生成基于教材片段的回答，不处理 PDF，不包含前端、后端或数据库。
+当前版本支持 OpenAI 或 DeepSeek API 生成基于教材片段的回答，支持命令行和 Streamlit 网页两种运行方式，不处理 PDF，不包含用户登录或数据库。
 
 ## 当前版本功能
 
@@ -21,6 +21,7 @@
 - 回答中保留“参考教材片段”。
 - 回答末尾显示“参考来源”，格式为 `steel_chapter.txt，第 3 段`。
 - 支持在命令行中循环提问。
+- 支持 Streamlit 网页界面，包含问题输入框、提交按钮、回答内容、参考教材片段和来源显示。
 - 输入 `exit` 或 `quit` 退出程序。
 
 ## 文件结构说明
@@ -44,6 +45,7 @@ steel-rag-assistant/
 │   └── test_vector_store.py
 ├── vector_store/
 ├── .env.example
+├── app.py
 ├── requirements.txt
 ├── README.md
 └── main.py
@@ -64,8 +66,9 @@ steel-rag-assistant/
 - `tests/test_vector_store.py`：验证 Chroma 写入和查询流程的封装逻辑。
 - `vector_store/`：运行程序后生成的 Chroma 本地向量索引目录。
 - `main.py`：命令行程序入口。
+- `app.py`：Streamlit 网页入口。
 - `.env.example`：OpenAI API Key 和模型名称配置示例。
-- `requirements.txt`：项目依赖，目前包含 Chroma、OpenAI SDK 和 python-dotenv。
+- `requirements.txt`：项目依赖，目前包含 Chroma、OpenAI SDK、python-dotenv 和 Streamlit。
 
 ## 如何运行
 
@@ -89,17 +92,39 @@ python -m pip install -r requirements.txt
 copy .env.example .env
 ```
 
-然后编辑 `.env`：
+如果使用 OpenAI，编辑 `.env`：
 
 ```text
+LLM_PROVIDER=openai
 OPENAI_API_KEY=你的_API_Key
 OPENAI_MODEL=gpt-4.1-mini
+```
+
+如果使用 DeepSeek，编辑 `.env`：
+
+```text
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=你的_DeepSeek_API_Key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
 ```
 
 运行命令行程序：
 
 ```bash
 python main.py
+```
+
+运行网页版本：
+
+```bash
+streamlit run app.py
+```
+
+也可以使用 Python 模块方式运行：
+
+```bash
+python -m streamlit run app.py
 ```
 
 ## 如何测试
@@ -132,6 +157,12 @@ python -m unittest discover -s tests
 ```text
 参考来源：
 - steel_chapter.txt，第 3 段
+```
+
+网页版本启动后，在浏览器中打开 Streamlit 提供的本地地址，通常是：
+
+```text
+http://localhost:8501
 ```
 
 ## 后续计划

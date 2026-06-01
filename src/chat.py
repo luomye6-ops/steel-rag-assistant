@@ -7,11 +7,19 @@ from src.text_chunk import TextChunk
 NO_CLEAR_ANSWER_MESSAGE = "当前教材内容中没有找到明确答案"
 
 
-def create_openai_client(api_key: str) -> Any:
-    """创建 OpenAI 客户端。"""
+def create_llm_client(api_key: str, base_url: str | None = None) -> Any:
+    """创建 OpenAI SDK 客户端，可用于 OpenAI 或 OpenAI-compatible 服务。"""
     from openai import OpenAI
 
+    if base_url:
+        return OpenAI(api_key=api_key, base_url=base_url)
+
     return OpenAI(api_key=api_key)
+
+
+def create_openai_client(api_key: str) -> Any:
+    """创建 OpenAI 客户端。"""
+    return create_llm_client(api_key)
 
 
 def _format_reference_text(references: list[str] | list[TextChunk]) -> str:
@@ -51,6 +59,7 @@ def generate_answer(
     references: list[str] | list[TextChunk],
     client: Any | None = None,
     model: str = DEFAULT_MODEL,
+    provider: str = "openai",
 ) -> str:
     """根据检索片段调用大模型生成回答，并保留参考教材片段。"""
     if not references:
@@ -71,16 +80,29 @@ def generate_answer(
         f"如果教材片段无法支持明确回答，直接回答“{NO_CLEAR_ANSWER_MESSAGE}”。"
     )
 
-    response = client.responses.create(
-        model=model,
-        instructions=instructions,
-        input=_build_model_input(question, references),
-    )
+    model_input = _build_model_input(question, references)
+
+    if provider == "deepseek":
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": model_input},
+            ],
+        )
+        answer_text = response.choices[0].message.content
+    else:
+        response = client.responses.create(
+            model=model,
+            instructions=instructions,
+            input=model_input,
+        )
+        answer_text = response.output_text
 
     reference_text = _format_reference_text(references)
     source_text = _format_reference_sources(references)
     return (
-        f"大模型回答：\n{response.output_text}\n\n"
+        f"大模型回答：\n{answer_text}\n\n"
         "参考教材片段：\n"
         f"{reference_text}\n\n"
         "参考来源：\n"
