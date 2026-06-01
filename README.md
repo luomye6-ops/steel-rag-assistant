@@ -11,7 +11,7 @@
 - 读取 `data` 文件夹下的所有 `.txt` 教材文件。
 - 对教材文本进行简单清洗，去掉首尾空格并压缩多余空行。
 - 按空行将教材文本切分为多个段落。
-- 给每个段落添加编号。
+- 给每个段落添加编号，并保留来源文件名。
 - 使用 Chroma 作为本地向量库，将教材段落写入 `vector_store` 文件夹。
 - 使用 Chroma 为教材段落和用户问题生成 embedding。
 - 用户输入问题后，使用向量检索返回最相关的 3 个教材片段。
@@ -19,6 +19,7 @@
 - 大模型回答必须基于教材片段。
 - 如果教材片段中没有明确答案，提示“当前教材内容中没有找到明确答案”。
 - 回答中保留“参考教材片段”。
+- 回答末尾显示“参考来源”，格式为 `steel_chapter.txt，第 3 段`。
 - 支持在命令行中循环提问。
 - 输入 `exit` 或 `quit` 退出程序。
 
@@ -34,6 +35,7 @@ steel-rag-assistant/
 │   ├── split_text.py
 │   ├── retrieve.py
 │   ├── vector_store.py
+│   ├── text_chunk.py
 │   ├── config.py
 │   └── chat.py
 ├── tests/
@@ -51,7 +53,8 @@ steel-rag-assistant/
 
 - `data/steel_chapter.txt`：模拟《钢铁冶金学》教材片段。
 - `src/load_text.py`：读取并清洗本地 txt 教材文件。
-- `src/split_text.py`：按空行切分教材段落，并为段落添加编号。
+- `src/split_text.py`：按空行切分教材段落，并为段落添加编号和来源文件名。
+- `src/text_chunk.py`：定义教材片段的数据结构，保存正文、来源文件名和段落编号。
 - `src/retrieve.py`：保留第一版关键词模拟检索代码。
 - `src/vector_store.py`：构建 Chroma 本地向量库，并执行向量检索。
 - `src/config.py`：从 `.env` 文件读取 OpenAI API Key 和模型配置。
@@ -122,7 +125,14 @@ python -m unittest discover -s tests
 请输入问题：焦炭在高炉中有什么作用？
 ```
 
-程序会先用 Chroma 检索教材片段，再调用大模型生成基于教材片段的回答，并显示“参考教材片段”。
+程序会先用 Chroma 检索教材片段，再调用大模型生成基于教材片段的回答，并显示“参考教材片段”和“参考来源”。
+
+参考来源示例：
+
+```text
+参考来源：
+- steel_chapter.txt，第 3 段
+```
 
 ## 后续计划
 

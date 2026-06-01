@@ -2,6 +2,8 @@ from pathlib import Path
 import shutil
 from typing import Any
 
+from src.text_chunk import TextChunk
+
 
 COLLECTION_NAME = "steel_textbook"
 VECTOR_STORE_DIR = "vector_store"
@@ -37,7 +39,7 @@ def _reset_collection(client: Any, collection_name: str) -> Any:
 
 
 def build_vector_store(
-    paragraphs: list[str],
+    paragraphs: list[str] | list[TextChunk],
     persist_dir: str | Path = VECTOR_STORE_DIR,
     collection_name: str = COLLECTION_NAME,
     client: Any | None = None,
@@ -49,7 +51,25 @@ def build_vector_store(
     chroma_client = client or get_chroma_client(persist_dir)
     collection = _reset_collection(chroma_client, collection_name)
 
-    documents = [paragraph.strip() for paragraph in paragraphs if paragraph.strip()]
+    documents: list[str] = []
+    metadatas: list[dict[str, Any]] = []
+
+    for index, paragraph in enumerate(paragraphs, 1):
+        if isinstance(paragraph, TextChunk):
+            documents.append(paragraph.display_text())
+            metadatas.append(
+                {
+                    "source_file": paragraph.source_file,
+                    "paragraph_number": paragraph.paragraph_number,
+                }
+            )
+            continue
+
+        text = paragraph.strip()
+        if text:
+            documents.append(text)
+            metadatas.append({"source_file": "", "paragraph_number": index})
+
     if not documents:
         return collection
 
@@ -57,16 +77,26 @@ def build_vector_store(
     collection.add(
         ids=[f"paragraph-{index:04d}" for index in range(1, len(documents) + 1)],
         documents=documents,
-        metadatas=[
-            {"paragraph_index": index}
-            for index in range(1, len(documents) + 1)
-        ],
+        metadatas=metadatas,
     )
 
     return collection
 
 
-def query_collection(collection: Any, question: str, top_k: int = 3) -> list[str]:
+def _document_to_chunk(document: str, metadata: dict[str, Any]) -> TextChunk:
+    """将 Chroma 查询结果还原为带来源信息的教材片段。"""
+    paragraph_number = int(metadata.get("paragraph_number") or 0)
+    prefix = f"{paragraph_number}. "
+    text = document[len(prefix):] if paragraph_number and document.startswith(prefix) else document
+
+    return TextChunk(
+        text=text,
+        source_file=str(metadata.get("source_file") or ""),
+        paragraph_number=paragraph_number,
+    )
+
+
+def query_collection(collection: Any, question: str, top_k: int = 3) -> list[TextChunk]:
     """使用 Chroma 向量检索返回最相关的教材片段。"""
     if collection.count() == 0:
         return []
@@ -75,4 +105,9 @@ def query_collection(collection: Any, question: str, top_k: int = 3) -> list[str
     results = collection.query(query_texts=[question], n_results=n_results)
 
     documents = results.get("documents") or [[]]
-    return documents[0] if documents else []
+    metadatas = results.get("metadatas") or [[]]
+
+    return [
+        _document_to_chunk(document, metadata)
+        for document, metadata in zip(documents[0], metadatas[0])
+    ]

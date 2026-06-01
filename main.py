@@ -1,7 +1,7 @@
 from src.chat import create_openai_client, generate_answer
 from src.config import load_settings
-from src.load_text import load_texts_from_data
-from src.split_text import split_text
+from src.load_text import load_text_files
+from src.split_text import split_text_files
 from src.vector_store import build_vector_store, query_collection
 
 
@@ -17,9 +17,9 @@ def main() -> None:
     if client is None:
         print("提示：未检测到 OPENAI_API_KEY，请在 .env 文件中配置后再提问。")
 
-    # 启动时读取 data 文件夹下所有 txt 教材，并切分为带编号的段落。
-    text = load_texts_from_data("data")
-    paragraphs = split_text(text)
+    # 启动时读取 data 文件夹下所有 txt 教材，并切分为带来源信息的段落。
+    text_files = load_text_files("data")
+    paragraphs = split_text_files(text_files)
 
     # 将教材段落写入 Chroma，本地向量索引会保存到 vector_store 文件夹。
     collection = build_vector_store(paragraphs, persist_dir="vector_store")

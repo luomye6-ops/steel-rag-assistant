@@ -44,3 +44,16 @@ def load_texts_from_data(data_dir: str | Path = "data") -> str:
 
     # 多个教材文件之间用空行分隔，方便后续切分段落。
     return "\n\n".join(texts)
+
+
+def load_text_files(data_dir: str | Path = "data") -> list[tuple[str, str]]:
+    """读取 data 文件夹下所有 txt 教材文件，并保留文件名。"""
+    paths = sorted(Path(data_dir).glob("*.txt"))
+    text_files: list[tuple[str, str]] = []
+
+    for path in paths:
+        text = load_text(path)
+        if text:
+            text_files.append((path.name, text))
+
+    return text_files

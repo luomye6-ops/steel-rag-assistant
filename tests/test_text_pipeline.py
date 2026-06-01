@@ -5,7 +5,7 @@ from pathlib import Path
 from src.chat import generate_answer
 from src.load_text import load_text, load_texts_from_data
 from src.retrieve import retrieve
-from src.split_text import split_text
+from src.split_text import split_text, split_text_files
 
 
 class TextPipelineTest(unittest.TestCase):
@@ -42,6 +42,20 @@ class TextPipelineTest(unittest.TestCase):
                 "3. 炉渣作用",
             ],
         )
+
+    def test_split_text_files_keeps_source_file_and_paragraph_number(self):
+        chunks = split_text_files(
+            [
+                ("steel_chapter.txt", "  高炉炼铁  \n\n  焦炭作用  "),
+                ("converter.txt", "转炉炼钢"),
+            ]
+        )
+
+        self.assertEqual(chunks[0].source_file, "steel_chapter.txt")
+        self.assertEqual(chunks[0].paragraph_number, 1)
+        self.assertEqual(chunks[0].display_text(), "1. 高炉炼铁")
+        self.assertEqual(chunks[1].source_text(), "steel_chapter.txt，第 2 段")
+        self.assertEqual(chunks[2].source_text(), "converter.txt，第 1 段")
 
     def test_retrieve_returns_top_three_matching_paragraphs(self):
         paragraphs = [
