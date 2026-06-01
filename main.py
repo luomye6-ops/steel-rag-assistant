@@ -1,4 +1,5 @@
-from src.chat import generate_answer
+from src.chat import create_openai_client, generate_answer
+from src.config import load_settings
 from src.load_text import load_texts_from_data
 from src.split_text import split_text
 from src.vector_store import build_vector_store, query_collection
@@ -8,6 +9,13 @@ def main() -> None:
     """命令行入口函数。"""
     print("《钢铁冶金学》教材 RAG 问答助手已启动")
     print("请输入问题，输入 exit 或 quit 退出。")
+
+    # 从 .env 文件读取 OpenAI API Key 和模型名称。
+    settings = load_settings(".env")
+    client = create_openai_client(settings.api_key) if settings.api_key else None
+
+    if client is None:
+        print("提示：未检测到 OPENAI_API_KEY，请在 .env 文件中配置后再提问。")
 
     # 启动时读取 data 文件夹下所有 txt 教材，并切分为带编号的段落。
     text = load_texts_from_data("data")
@@ -30,9 +38,13 @@ def main() -> None:
             print("问题不能为空，请重新输入。")
             continue
 
+        if client is None:
+            print("当前无法调用大模型：请先在 .env 文件中配置 OPENAI_API_KEY。")
+            continue
+
         # 使用 Chroma 向量检索最相关的 3 个教材片段。
         references = query_collection(collection, question, top_k=3)
-        answer = generate_answer(question, references)
+        answer = generate_answer(question, references, client=client, model=settings.model)
         print("\n" + answer)
 
 

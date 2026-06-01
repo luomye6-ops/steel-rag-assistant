@@ -73,7 +73,7 @@ class TextPipelineTest(unittest.TestCase):
         answer = generate_answer("连铸结晶器振动参数", [])
 
         self.assertIn("参考教材片段", answer)
-        self.assertIn("暂未找到明显相关内容", answer)
+        self.assertIn("当前教材内容中没有找到明确答案", answer)
 
 
 if __name__ == "__main__":

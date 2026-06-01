@@ -4,7 +4,7 @@
 
 `steel-rag-assistant` 是一个面向《钢铁冶金学》教材检索问答的最小可运行 RAG 项目骨架。当前阶段只使用 `data` 文件夹下的本地 txt 教材文本，通过命令行完成简单问答流程。
 
-当前版本不接入 OpenAI API，不处理 PDF，不包含前端、后端或数据库。
+当前版本接入 OpenAI API 生成基于教材片段的回答，不处理 PDF，不包含前端、后端或数据库。
 
 ## 当前版本功能
 
@@ -15,8 +15,10 @@
 - 使用 Chroma 作为本地向量库，将教材段落写入 `vector_store` 文件夹。
 - 使用 Chroma 为教材段落和用户问题生成 embedding。
 - 用户输入问题后，使用向量检索返回最相关的 3 个教材片段。
-- 如果没有明显匹配结果，提示“暂未找到明显相关内容”。
-- 根据检索结果拼接模拟回答。
+- 将用户问题和检索到的教材片段一起发送给大模型。
+- 大模型回答必须基于教材片段。
+- 如果教材片段中没有明确答案，提示“当前教材内容中没有找到明确答案”。
+- 回答中保留“参考教材片段”。
 - 支持在命令行中循环提问。
 - 输入 `exit` 或 `quit` 退出程序。
 
@@ -32,8 +34,10 @@ steel-rag-assistant/
 │   ├── split_text.py
 │   ├── retrieve.py
 │   ├── vector_store.py
+│   ├── config.py
 │   └── chat.py
 ├── tests/
+│   ├── test_llm_answer.py
 │   ├── test_text_pipeline.py
 │   └── test_vector_store.py
 ├── vector_store/
@@ -50,13 +54,15 @@ steel-rag-assistant/
 - `src/split_text.py`：按空行切分教材段落，并为段落添加编号。
 - `src/retrieve.py`：保留第一版关键词模拟检索代码。
 - `src/vector_store.py`：构建 Chroma 本地向量库，并执行向量检索。
-- `src/chat.py`：根据参考片段生成模拟回答。
+- `src/config.py`：从 `.env` 文件读取 OpenAI API Key 和模型配置。
+- `src/chat.py`：调用 OpenAI 大模型，根据参考片段生成回答。
+- `tests/test_llm_answer.py`：验证大模型调用输入、无片段提示和 `.env` 配置读取。
 - `tests/test_text_pipeline.py`：验证教材读取、清洗、切分和编号行为。
 - `tests/test_vector_store.py`：验证 Chroma 写入和查询流程的封装逻辑。
 - `vector_store/`：运行程序后生成的 Chroma 本地向量索引目录。
 - `main.py`：命令行程序入口。
-- `.env.example`：后续接入 API 时使用的环境变量示例。
-- `requirements.txt`：项目依赖，目前包含 Chroma。
+- `.env.example`：OpenAI API Key 和模型名称配置示例。
+- `requirements.txt`：项目依赖，目前包含 Chroma、OpenAI SDK 和 python-dotenv。
 
 ## 如何运行
 
@@ -72,6 +78,19 @@ cd steel-rag-assistant
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+```
+
+创建 `.env` 文件：
+
+```bash
+copy .env.example .env
+```
+
+然后编辑 `.env`：
+
+```text
+OPENAI_API_KEY=你的_API_Key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
 运行命令行程序：
@@ -103,11 +122,10 @@ python -m unittest discover -s tests
 请输入问题：焦炭在高炉中有什么作用？
 ```
 
-程序会打印包含“模拟回答”、用户问题、参考教材片段和后续版本提示的回答。
+程序会先用 Chroma 检索教材片段，再调用大模型生成基于教材片段的回答，并显示“参考教材片段”。
 
 ## 后续计划
 
-- 接入真实大模型 API，生成更自然的回答。
 - 根据需要评估更多向量检索工具或 embedding 模型。
 - 支持 PDF 教材解析和文本清洗。
 - 增加更完整的问答评估与测试。
