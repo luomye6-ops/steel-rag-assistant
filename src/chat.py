@@ -1,7 +1,7 @@
 def generate_answer(question: str, references: list[str]) -> str:
     """根据检索到的教材片段拼接一个模拟回答。"""
-    # 段落在切分阶段已经编号，这里直接合并展示。
-    reference_text = "\n\n".join(references)
+    # 没有检索结果时，给出明确提示，而不是编造答案。
+    reference_text = "\n\n".join(references) if references else "暂未找到明显相关内容"
 
     # 第一版不调用大模型，只返回结构化的模拟回答。
     return (
