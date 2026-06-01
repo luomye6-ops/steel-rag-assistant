@@ -1,7 +1,7 @@
 from src.chat import generate_answer
 from src.load_text import load_texts_from_data
-from src.retrieve import retrieve
 from src.split_text import split_text
+from src.vector_store import build_vector_store, query_collection
 
 
 def main() -> None:
@@ -12,6 +12,9 @@ def main() -> None:
     # 启动时读取 data 文件夹下所有 txt 教材，并切分为带编号的段落。
     text = load_texts_from_data("data")
     paragraphs = split_text(text)
+
+    # 将教材段落写入 Chroma，本地向量索引会保存到 vector_store 文件夹。
+    collection = build_vector_store(paragraphs, persist_dir="vector_store")
 
     while True:
         # 获取用户输入的问题。
@@ -27,8 +30,8 @@ def main() -> None:
             print("问题不能为空，请重新输入。")
             continue
 
-        # 执行模拟检索并生成模拟回答。
-        references = retrieve(paragraphs, question)
+        # 使用 Chroma 向量检索最相关的 3 个教材片段。
+        references = query_collection(collection, question, top_k=3)
         answer = generate_answer(question, references)
         print("\n" + answer)
 
