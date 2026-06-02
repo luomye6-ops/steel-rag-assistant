@@ -4,7 +4,7 @@
 
 `steel-rag-assistant` 是一个面向《钢铁冶金学》教材内容的本地 RAG 问答项目。项目可以读取本地教材文本，构建 Chroma 向量索引，并通过命令行或 Streamlit 页面进行基于教材片段的问答。
 
-当前版本支持 PDF 教材导入，但仅提取 PDF 自带文字层，暂时不支持 OCR。因此，扫描版或图片型 PDF 的解析效果取决于原文件是否包含可提取文本。
+当前版本支持两种 PDF 导入方式：普通 PDF 会直接提取自带文字层；扫描版或图片型 PDF 可以使用 OCR 模式识别图片中的文字。OCR 识别结果会受 PDF 清晰度、排版和 OCR 环境影响。
 
 ## 项目截图
 
@@ -24,6 +24,7 @@ docs/screenshots/
 
 - 读取本地 `.txt` 教材文本。
 - 导入 PDF 教材并提取为 `.txt` 文本。
+- 使用 OCR 识别扫描版 PDF。
 - 在 PDF 提取文本中保留页码标记，例如 `【第 1 页】`。
 - 清洗教材文本中的多余空行和首尾空格。
 - 将教材文本切分为 chunks。
@@ -38,6 +39,7 @@ docs/screenshots/
 
 - Python
 - PyMuPDF：PDF 文本提取
+- pytesseract：扫描版 PDF 的 OCR 识别
 - Chroma：本地向量数据库
 - OpenAI Python SDK：调用 OpenAI / DeepSeek 兼容接口
 - Streamlit：网页问答界面
@@ -66,6 +68,7 @@ steel-rag-assistant/
 │   ├── chunk_store.py         # chunks.json 读写
 │   ├── config.py              # 配置读取
 │   ├── load_text.py           # txt 教材读取
+│   ├── ocr_loader.py          # 扫描版 PDF 的 OCR 识别
 │   ├── pdf_loader.py          # PDF 文本提取
 │   ├── retrieve.py            # 简单检索逻辑
 │   ├── split_text.py          # 文本切分
@@ -97,6 +100,16 @@ python -m venv .venv
 
 ```bash
 python -m pip install -r requirements.txt
+```
+
+如果需要识别扫描版 PDF，还需要安装 Tesseract OCR 程序，并安装中文语言包。`pytesseract` 只是 Python 调用库，不能单独完成 OCR。
+
+Windows 可参考安装方向：
+
+```text
+1. 安装 Tesseract OCR。
+2. 安装或确认存在 chi_sim 中文语言包。
+3. 确认命令行中可以运行 tesseract --version。
 ```
 
 复制环境变量文件：
@@ -178,6 +191,14 @@ python scripts/import_pdf.py data/pdfs/钢铁冶金学教程.pdf
 data/texts/钢铁冶金学教程.txt
 ```
 
+如果 PDF 是扫描版或图片型 PDF，使用 OCR 模式：
+
+```bash
+python scripts/import_pdf.py data/pdfs/扫描版教材.pdf --ocr
+```
+
+OCR 模式会逐页把 PDF 渲染成图片，再识别图片中的中文和英文。识别后的文本同样会保存到 `data/texts/`。
+
 ### 重建索引
 
 导入 PDF 后，运行：
@@ -211,9 +232,15 @@ python scripts/import_pdf.py data/pdfs/新教材.pdf
 python scripts/rebuild_index.py
 ```
 
+如果新教材是扫描版：
+
+```bash
+python scripts/import_pdf.py data/pdfs/新教材.pdf --ocr
+python scripts/rebuild_index.py
+```
+
 ## 后续计划
 
-- 增加 OCR 支持，用于处理扫描版 PDF。
 - 改进 PDF 文本清洗规则，过滤固定水印、页眉和页脚。
 - 优化 chunk 切分策略，减少过短或噪声片段。
 - 增加更完整的检索与问答效果评估。
@@ -222,6 +249,30 @@ python scripts/rebuild_index.py
 
 ## 当前限制
 
-- 不支持 OCR。
+- OCR 需要额外安装 Tesseract OCR 程序和中文语言包。
+- OCR 识别结果可能出现错字、断行或漏识别。
 - PDF 解析质量依赖原 PDF 的文字层质量。
 - 当前项目主要用于本地教材问答实验，不包含用户登录、权限管理或在线部署配置。
+
+## OCR 功能测试方法
+
+可以先运行自动化测试，确认 OCR 代码路径没有破坏已有功能：
+
+```bash
+python -m unittest tests.test_pdf_import_pipeline
+python -m unittest discover -s tests
+```
+
+再用一个扫描版 PDF 做手动测试：
+
+```bash
+python scripts/import_pdf.py data/pdfs/扫描版教材.pdf --ocr
+python scripts/rebuild_index.py
+```
+
+检查以下文件是否生成，并查看其中是否有可读中文：
+
+```text
+data/texts/扫描版教材.txt
+data/processed/chunks.json
+```
