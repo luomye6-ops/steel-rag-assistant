@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from src.chat import generate_answer
-from src.load_text import load_text, load_texts_from_data
+from src.load_text import load_text, load_text_files, load_texts_from_data
 from src.retrieve import retrieve
 from src.split_text import split_text, split_text_files
 
@@ -28,6 +28,24 @@ class TextPipelineTest(unittest.TestCase):
             text = load_text(file_path)
 
         self.assertEqual(text, "高炉炼铁\n\n焦炭作用")
+
+    def test_load_text_files_reads_root_data_and_texts_subdirectory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            data_dir = Path(temp_dir)
+            texts_dir = data_dir / "texts"
+            texts_dir.mkdir()
+            (data_dir / "old.txt").write_text("旧教材", encoding="utf-8")
+            (texts_dir / "imported.txt").write_text("导入教材", encoding="utf-8")
+
+            text_files = load_text_files(data_dir)
+
+        self.assertEqual(
+            text_files,
+            [
+                ("old.txt", "旧教材"),
+                ("imported.txt", "导入教材"),
+            ],
+        )
 
     def test_split_text_cleans_paragraphs_and_adds_numbers(self):
         text = "  高炉炼铁  \n\n\n  焦炭作用  \n\n 炉渣作用 "

@@ -57,12 +57,15 @@ def build_vector_store(
     for index, paragraph in enumerate(paragraphs, 1):
         if isinstance(paragraph, TextChunk):
             documents.append(paragraph.display_text())
-            metadatas.append(
-                {
-                    "source_file": paragraph.source_file,
-                    "paragraph_number": paragraph.paragraph_number,
-                }
-            )
+            metadata = {
+                "source_file": paragraph.source_file,
+                "paragraph_number": paragraph.paragraph_number,
+            }
+            if paragraph.page is not None:
+                metadata["page"] = paragraph.page
+            if paragraph.chunk_id is not None:
+                metadata["chunk_id"] = paragraph.chunk_id
+            metadatas.append(metadata)
             continue
 
         text = paragraph.strip()
@@ -93,6 +96,8 @@ def _document_to_chunk(document: str, metadata: dict[str, Any]) -> TextChunk:
         text=text,
         source_file=str(metadata.get("source_file") or ""),
         paragraph_number=paragraph_number,
+        page=int(metadata["page"]) if metadata.get("page") is not None else None,
+        chunk_id=int(metadata["chunk_id"]) if metadata.get("chunk_id") is not None else None,
     )
 
 

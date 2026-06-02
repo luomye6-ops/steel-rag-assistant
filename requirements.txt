@@ -1,4 +1,5 @@
 chromadb
 openai
+pymupdf
 python-dotenv
 streamlit

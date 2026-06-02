@@ -30,10 +30,21 @@ def load_text(file_path: str | Path = "data/steel_chapter.txt") -> str:
     return clean_text(path.read_text(encoding="utf-8"))
 
 
+def _collect_txt_paths(data_dir: str | Path = "data") -> list[Path]:
+    """收集根目录 txt 和 data/texts 下导入生成的 txt 文件。"""
+    data_path = Path(data_dir)
+
+    # 先读取旧版 data/*.txt，再读取新版 data/texts/*.txt，保持兼容和顺序稳定。
+    root_paths = sorted(data_path.glob("*.txt"))
+    imported_paths = sorted((data_path / "texts").glob("*.txt"))
+
+    return root_paths + imported_paths
+
+
 def load_texts_from_data(data_dir: str | Path = "data") -> str:
     """读取 data 文件夹下所有 txt 教材文件，并合并为一段文本。"""
-    # 按文件名排序，保证每次读取顺序稳定。
-    paths = sorted(Path(data_dir).glob("*.txt"))
+    # 同时读取 data/*.txt 和 data/texts/*.txt，兼容旧教材和新导入教材。
+    paths = _collect_txt_paths(data_dir)
     texts = []
 
     for path in paths:
@@ -48,7 +59,8 @@ def load_texts_from_data(data_dir: str | Path = "data") -> str:
 
 def load_text_files(data_dir: str | Path = "data") -> list[tuple[str, str]]:
     """读取 data 文件夹下所有 txt 教材文件，并保留文件名。"""
-    paths = sorted(Path(data_dir).glob("*.txt"))
+    # 同时读取 data/*.txt 和 data/texts/*.txt，供 main.py 和 app.py 构建索引。
+    paths = _collect_txt_paths(data_dir)
     text_files: list[tuple[str, str]] = []
 
     for path in paths:
