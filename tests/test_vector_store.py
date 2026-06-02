@@ -88,6 +88,20 @@ class VectorStoreTest(unittest.TestCase):
             },
         )
 
+    def test_build_vector_store_adds_documents_in_batches(self):
+        client = FakeClient()
+        paragraphs = [
+            TextChunk(f"片段 {index}", "ocr_book.txt", index)
+            for index in range(1, 6)
+        ]
+
+        build_vector_store(paragraphs, client=client, batch_size=2)
+
+        self.assertEqual(len(client.collection.add_calls), 3)
+        self.assertEqual(client.collection.add_calls[0]["ids"], ["paragraph-0001", "paragraph-0002"])
+        self.assertEqual(client.collection.add_calls[1]["ids"], ["paragraph-0003", "paragraph-0004"])
+        self.assertEqual(client.collection.add_calls[2]["ids"], ["paragraph-0005"])
+
     def test_query_collection_returns_top_three_chunks_with_sources(self):
         collection = FakeCollection()
         collection.documents = ["1. 高炉炼铁", "2. 焦炭作用", "3. 炉渣作用", "4. 转炉炼钢"]

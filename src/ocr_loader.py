@@ -29,7 +29,16 @@ def extract_text_from_scanned_pdf(
         import pytesseract
 
         def ocr_function(image: Any, lang: str) -> str:
-            return pytesseract.image_to_string(image, lang=lang)
+            # Windows 安装器有时不会立刻刷新 PATH，这里兼容默认安装路径。
+            tesseract_cmd = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+            if tesseract_cmd.exists():
+                pytesseract.pytesseract.tesseract_cmd = str(tesseract_cmd)
+
+            # 项目本地 tessdata 可放中文语言包，避免必须写入 Program Files。
+            tessdata_dir = Path(__file__).resolve().parents[1] / "tessdata"
+            config = f'--tessdata-dir "{tessdata_dir}"' if tessdata_dir.exists() else ""
+
+            return pytesseract.image_to_string(image, lang=lang, config=config)
 
     if image_converter is None:
         image_converter = _pixmap_to_image

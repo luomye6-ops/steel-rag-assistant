@@ -43,6 +43,7 @@ def build_vector_store(
     persist_dir: str | Path = VECTOR_STORE_DIR,
     collection_name: str = COLLECTION_NAME,
     client: Any | None = None,
+    batch_size: int = 5000,
 ) -> Any:
     """将教材段落写入 Chroma，本地生成 embedding 并保存向量索引。"""
     if client is None:
@@ -76,12 +77,15 @@ def build_vector_store(
     if not documents:
         return collection
 
-    # Chroma 会使用 collection 的 embedding function 为 documents 生成 embedding。
-    collection.add(
-        ids=[f"paragraph-{index:04d}" for index in range(1, len(documents) + 1)],
-        documents=documents,
-        metadatas=metadatas,
-    )
+    # Chroma 对单次 add 的数量有限制，OCR 教材片段较多时需要分批写入。
+    ids = [f"paragraph-{index:04d}" for index in range(1, len(documents) + 1)]
+    for start in range(0, len(documents), batch_size):
+        end = start + batch_size
+        collection.add(
+            ids=ids[start:end],
+            documents=documents[start:end],
+            metadatas=metadatas[start:end],
+        )
 
     return collection
 
